@@ -6,6 +6,7 @@ import type { Logger } from 'winston';
 import { AppConfigurationModule } from '../configuration/app-configuration.module.js';
 import { AppConfigurationService } from '../configuration/app-configuration.service.js';
 import { LoggingModule } from '../logging/logging.module.js';
+import { MongoReadinessAdapter } from './adapters/mongo-readiness.adapter.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { LoggingModule } from '../logging/logging.module.js';
       }),
     }),
   ],
-  exports: [MongooseModule],
+  providers: [MongoReadinessAdapter],
+  exports: [MongooseModule, MongoReadinessAdapter],
 })
 export class DatabaseModule {}

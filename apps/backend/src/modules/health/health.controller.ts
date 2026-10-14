@@ -1,5 +1,6 @@
 import { Controller, Get, Header } from '@nestjs/common';
 import { HealthService } from './health.service.js';
+import type { HealthRes } from './types/health.js';
 
 @Controller('health')
 export class HealthController {
@@ -7,7 +8,7 @@ export class HealthController {
 
   @Get()
   @Header('Cache-Control', 'no-store')
-  readiness() {
+  readiness(): Promise<HealthRes> {
     return this.health.readiness();
   }
 }

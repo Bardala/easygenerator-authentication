@@ -8,6 +8,9 @@
   "engines": {
     "node": ">=24 <25"
   },
+  "overrides": {
+    "js-yaml": "^4.1.1"
+  },
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names backend,frontend \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:backend": "npm run dev --workspace @easygenerator/backend",
@@ -21,6 +24,7 @@
     "format:check": "prettier . --check",
     "check": "npm run lint && npm run typecheck && npm run format:check",
     "verify": "npm run check && npm run build",
+    "test:backend": "npm run test --workspace @easygenerator/backend",
     "db:up": "docker compose -f compose.dev.yaml up -d --wait",
     "db:down": "docker compose -f compose.dev.yaml down"
   },

@@ -1,6 +1,6 @@
 import { getJson } from '../../../lib/http';
-import type { HealthResponse } from '../types/health';
+import type { HealthRes } from '../types/health';
 
-export function getHealth(signal: AbortSignal): Promise<HealthResponse> {
-  return getJson<HealthResponse>('/health', signal);
+export function getHealth(signal: AbortSignal): Promise<HealthRes> {
+  return getJson<HealthRes>('/health', signal);
 }

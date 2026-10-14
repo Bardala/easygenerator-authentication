@@ -1,24 +1,13 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
-import type { Connection } from 'mongoose';
+import { Injectable } from '@nestjs/common';
+import { MongoReadinessAdapter } from '../database/adapters/mongo-readiness.adapter.js';
+import type { HealthRes } from './types/health.js';
 
 @Injectable()
 export class HealthService {
-  constructor(@InjectConnection() private readonly connection: Connection) {}
+  constructor(private readonly database: MongoReadinessAdapter) {}
 
-  async readiness(): Promise<{ status: 'ok'; checks: { mongodb: 'up' } }> {
-    try {
-      if (this.connection.readyState !== 1 || !this.connection.db) {
-        throw new Error('Not connected');
-      }
-      await this.connection.db.admin().ping({ timeoutMS: 2000 });
-      return { status: 'ok', checks: { mongodb: 'up' } };
-    } catch {
-      throw new ServiceUnavailableException({
-        code: 'DEPENDENCY_UNAVAILABLE',
-        message: 'Database is unavailable.',
-        checks: { mongodb: 'down' },
-      });
-    }
+  async readiness(): Promise<HealthRes> {
+    await this.database.assertAvailable();
+    return { status: 'ok', checks: { mongodb: 'up' } };
   }
 }

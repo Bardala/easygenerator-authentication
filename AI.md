@@ -32,3 +32,24 @@ Docker daemon access was denied in the execution environment even after an eleva
 - Frontend HTTP route serving was verified. No browser is connected to the session, so visual/browser interaction checks were not claimed.
 
 No Phase 2 authentication behavior or Phase 3 forms have been implemented. The engineer's review and approval are required before advancing.
+
+## Phase 1 review refinements
+
+The engineer requested cleaner backend infrastructure, a common module, global error handling, explicit response contracts, and `Req`/`Res` names for application types in both workspaces. AI reviewed the existing code and explained that sanitized errors had originally been scheduled for Phase 2. The engineer authorized implementing this foundation before authentication.
+
+AI added the common module, a global `APP_FILTER`, an HTTP error adapter, intentionally public application errors, and common error contracts. MongoDB readiness moved into a database-owned adapter. `HealthService` now delegates the check and returns `HealthRes` without constructing HTTP errors or catching driver failures. A focused try/catch remains at the driver boundary because translating dependency failures to `503` is meaningful error handling.
+
+Success payloads and the existing health failure's `checks` field were preserved. Application contracts now use `Res` naming, including backend/frontend `HealthRes` and `ApiErrorRes`. No artificial request DTO was added for the bodyless health GET. The frontend HTTP client retains the server's error code and message in a typed error payload.
+
+Inspection of Nest's installed Express adapter confirmed that its existing error layer routes middleware failures through global exception filters. An extra middleware bridge was therefore unnecessary. Common decorators, guards, interceptors, middleware, and pipes will be added when features need them, rather than generating unused scaffolding.
+
+### Verification and rework
+
+- Nine Jest regression tests passed through the real Nest/Express pipeline and database boundary, covering unchanged health success/failure payloads, unexpected errors, HTTP exceptions, middleware failures, malformed JSON, missing routes, disconnected databases, and driver ping failures.
+- Jest's VM ESM loader could not load the CommonJS Winston adapter that requires Nest's ESM packages. Tests isolate that logging transport with an injectable double; the real HTTP pipeline, global filter, and error adapter remain under test. Native application startup separately verifies the actual Winston integration.
+- Introducing Jest exposed advisories in its legacy coverage YAML dependency chain. A `js-yaml` override upgraded the parser, and the lockfile was resolved from clean manifests/dependencies after the existing resolution retained the older parser. The coverage loader's YAML API compatibility check passed. Installation then reported zero vulnerabilities.
+- The override intentionally exceeds the coverage loader's declared YAML 3 range. `npm ls` reports that range mismatch; runtime compatibility is checked rather than assuming a major upgrade is safe.
+- Linting, strict type checks, formatting, both production builds, and a clean online `npm ci` passed after the refactor. Offline installation lacked cached metadata, so clean-install verification was completed online.
+- Native application checks verified the health `200` response, the sanitized global `404`, and the original health `503` payload with real MongoDB stopped. MongoDB was restored for the review preview.
+
+The review refinements stay within Phase 1. Authentication implementation still requires approval to start Phase 2.

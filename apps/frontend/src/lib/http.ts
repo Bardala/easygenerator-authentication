@@ -1,17 +1,19 @@
+import type { ApiErrorRes } from './types/api';
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    message: string,
+    public readonly res: ApiErrorRes,
   ) {
-    super(message);
+    super(res.message);
     this.name = 'ApiError';
   }
 }
 
-export async function getJson<T>(
+export async function getJson<TRes>(
   path: string,
   signal: AbortSignal,
-): Promise<T> {
+): Promise<TRes> {
   const response = await fetch(`/api${path}`, {
     signal,
     credentials: 'same-origin',
@@ -20,15 +22,20 @@ export async function getJson<T>(
   const body: unknown = await response.json();
 
   if (!response.ok) {
-    const message =
+    const res: ApiErrorRes =
       typeof body === 'object' &&
       body !== null &&
+      'code' in body &&
+      typeof body.code === 'string' &&
       'message' in body &&
       typeof body.message === 'string'
-        ? body.message
-        : 'The request could not be completed.';
-    throw new ApiError(response.status, message);
+        ? { code: body.code, message: body.message }
+        : {
+            code: 'REQUEST_FAILED',
+            message: 'The request could not be completed.',
+          };
+    throw new ApiError(response.status, res);
   }
 
-  return body as T;
+  return body as TRes;
 }

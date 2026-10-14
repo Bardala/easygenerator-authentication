@@ -6,6 +6,8 @@ A phased implementation of a React/TypeScript frontend and a NestJS/MongoDB back
 
 Phase 1 provides workspace tooling, feature modules, routing, CSS foundations, validated backend configuration, structured logging, and database readiness. Authentication modules and routes are explicitly scaffolded; authentication endpoints, forms, and route protection are delivered in later phases after review.
 
+Phase 1 review refinements add a backend common module, global error formatting, a database readiness adapter, explicit `Req`/`Res` contract naming, and regression tests. Success payloads retain their existing shape.
+
 ## Prerequisites
 
 - Node.js 24 and npm 11.
@@ -38,17 +40,18 @@ If Docker is unavailable, start a local MongoDB server and set `MONGODB_URI` acc
 
 ## Commands
 
-| Command                                        | Purpose                                    |
-| ---------------------------------------------- | ------------------------------------------ |
-| `npm run dev`                                  | Start both applications with file watching |
-| `npm run dev:backend` / `npm run dev:frontend` | Start one application                      |
-| `npm run check`                                | Lint, type-check, and check formatting     |
-| `npm run build`                                | Build both applications                    |
-| `npm run verify`                               | Run checks and production builds           |
-| `npm run format`                               | Apply formatting                           |
-| `npm run start:backend`                        | Run the compiled backend                   |
-| `npm run preview:frontend`                     | Preview the frontend build at port 4173    |
-| `npm run db:up` / `npm run db:down`            | Start/stop development MongoDB             |
+| Command                                        | Purpose                                                   |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| `npm run dev`                                  | Start both applications with file watching                |
+| `npm run dev:backend` / `npm run dev:frontend` | Start one application                                     |
+| `npm run check`                                | Lint, type-check, and check formatting                    |
+| `npm run build`                                | Build both applications                                   |
+| `npm run verify`                               | Run checks and production builds                          |
+| `npm run test:backend`                         | Build the backend and run error-boundary regression tests |
+| `npm run format`                               | Apply formatting                                          |
+| `npm run start:backend`                        | Run the compiled backend                                  |
+| `npm run preview:frontend`                     | Preview the frontend build at port 4173                   |
+| `npm run db:up` / `npm run db:down`            | Start/stop development MongoDB                            |
 
 The Vite proxy targets backend port 3000. Update its configuration if changing `PORT`. Frontend preview is for local build inspection, not production hosting. Production containers and CI arrive in Phase 4.
 
@@ -80,6 +83,11 @@ apps/
       authentication/          # Own components, pages, types, styles
       application/             # Own API functions, hooks, components, pages, types, styles
   backend/src/
+    common/
+      adapters/                # Normalize HTTP errors
+      errors/                  # Explicitly public application errors
+      filters/                 # Global HTTP exception boundary
+      types/                   # Common API contracts
     modules/
       configuration/
       logging/
@@ -92,6 +100,20 @@ apps/
 Modules gain hooks, validation functions, and API functions when their behavior is implemented; empty abstractions are not added in advance. CSS Modules consume global CSS variables. TanStack Query owns server data; form state will remain local and use native inputs. No frontend form or validation libraries are installed.
 
 There is no shared package in this scope. Backend framework/database types stay in the backend, and frontend API types remain in their feature module.
+
+Application DTOs and API types use `Req` and `Res` suffixes, such as `HealthRes`. Framework-provided types retain their library names. A bodyless GET has no artificial request DTO. Add common guards, decorators, interceptors, middleware, and pipes when a feature needs them.
+
+## Error handling
+
+The common module registers a dependency-injected `APP_FILTER`. It covers controller errors, routing errors, and Express middleware failures through Nest's existing exception layer. Responses use `{ code, message, fieldErrors? }`; the health dependency error also retains its existing `checks` field.
+
+`ApplicationError` marks a payload as intentionally public. Ordinary exceptions receive safe messages selected by status; their raw messages, causes, and stack traces are excluded from responses and error logs. Unknown errors return `500` with `INTERNAL_ERROR`. Error responses are not cacheable. Startup configuration errors remain handled separately before the HTTP application exists.
+
+MongoDB-specific translation belongs in `MongoReadinessAdapter`. It retains a failed driver's cause internally and throws a public dependency error. `HealthService` delegates the check and returns a typed success payload without HTTP error construction or a try/catch block.
+
+The Jest suite exercises the real Nest/Express HTTP pipeline with isolated database and logging doubles, including malformed JSON, middleware failures, sanitized controller failures, and health contracts. It does not require a running database. The test command enables Jest's experimental VM-module support for ESM; production execution does not use that flag.
+
+A root `js-yaml` override removes a vulnerable legacy dependency from Jest's coverage configuration loader. The loader's YAML API compatibility is checked during verification. The override upgrades its declared YAML 3 dependency to YAML 4; `npm ls` reports the upstream range mismatch, while clean installation, compatibility checks, and tests pass.
 
 ## Readiness contract
 

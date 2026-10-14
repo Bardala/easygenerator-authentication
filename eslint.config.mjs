@@ -8,6 +8,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
+      '.npm-cache/**',
       '**/coverage/**',
       '.agents/**',
       '.codex/**',
@@ -17,7 +18,7 @@ export default tseslint.config(
   js.configs.recommended,
   tseslint.configs.recommended,
   {
-    files: ['*.mjs', 'apps/backend/**/*.ts', 'apps/frontend/vite.config.ts'],
+    files: ['**/*.mjs', 'apps/backend/**/*.ts', 'apps/frontend/vite.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {
