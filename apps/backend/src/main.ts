@@ -2,17 +2,20 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module.js';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { configureApplication } from './app.setup.js';
 import { AppConfigurationService } from './modules/configuration/app-configuration.service.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     abortOnError: false,
+    bodyParser: false,
   });
   const configuration = app.get(AppConfigurationService);
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  app.setGlobalPrefix('api');
+  configureApplication(app);
   app.enableShutdownHooks();
 
   await app.listen(configuration.port, '127.0.0.1');

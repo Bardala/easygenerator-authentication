@@ -9,7 +9,9 @@
     "node": ">=24 <25"
   },
   "overrides": {
-    "js-yaml": "^4.1.1"
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "^4.1.1"
+    }
   },
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names backend,frontend \"npm:dev:backend\" \"npm:dev:frontend\"",

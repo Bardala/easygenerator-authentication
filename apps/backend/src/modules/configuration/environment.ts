@@ -5,6 +5,7 @@ export interface Environment {
   MONGODB_URI: string;
   LOG_LEVEL: 'error' | 'warn' | 'info' | 'debug';
   SESSION_SECRET: string;
+  TRUST_PROXY_HOPS: number;
 }
 
 export function validateEnvironment(
@@ -19,6 +20,10 @@ export function validateEnvironment(
   const mongoUri = String(input['MONGODB_URI'] ?? '');
   const logLevel = input['LOG_LEVEL'] ?? 'info';
   const sessionSecret = String(input['SESSION_SECRET'] ?? '');
+  const trustProxyHops = Number(input['TRUST_PROXY_HOPS'] ?? 0);
+  if (![0, 1].includes(trustProxyHops)) {
+    errors.push('TRUST_PROXY_HOPS must be 0 or 1.');
+  }
 
   if (!['local', 'test', 'production'].includes(String(appEnvironment))) {
     errors.push('APP_ENV must be local, test, or production.');
@@ -70,5 +75,6 @@ export function validateEnvironment(
     MONGODB_URI: mongoUri,
     LOG_LEVEL: logLevel as Environment['LOG_LEVEL'],
     SESSION_SECRET: sessionSecret,
+    TRUST_PROXY_HOPS: trustProxyHops,
   };
 }

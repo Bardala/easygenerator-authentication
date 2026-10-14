@@ -53,3 +53,38 @@ Inspection of Nest's installed Express adapter confirmed that its existing error
 - Native application checks verified the health `200` response, the sanitized global `404`, and the original health `503` payload with real MongoDB stopped. MongoDB was restored for the review preview.
 
 The review refinements stay within Phase 1. Authentication implementation still requires approval to start Phase 2.
+
+## Phase 2 assistance
+
+After the engineer approved backend authentication, AI implemented user persistence and DTOs, focused authentication/password/session/CSRF services, a MongoDB session adapter, reusable common guards and validation pipes, request logging, security headers, shared rate-limit budgets, and local Swagger. Application contracts continue using `Req`/`Res`; Express framework types retain their own names. Frontend forms were kept outside this phase.
+
+Effective instructions were “continue phase2,” the existing requirement to stop at each review gate, and the request for cleaner modules and common infrastructure. These kept controllers focused on HTTP, user operations within the users service, storage failure translation at adapters, and session orchestration separate from persistence. README and this record were updated with actual behavior and verification.
+
+The implementation uses only required backend dependencies from the agreed stack. Argon2id, sessions, CSRF, Nest validation/throttling, and Swagger replace unrelated suggested packages; SQL drivers, JWTs, scheduling, realtime, process managers, and frontend validation libraries were unnecessary.
+
+### Engineering decisions and corrections
+
+- Session-bound CSRF applies to signup, sign-in, and logout. Authentication regenerates sessions and tokens and explicitly saves them before returning. CSRF enforcement uses a common guard after the global rate-limit guard, so invalid CSRF attempts also consume the authentication budget.
+- Both signup and sign-in share the same per-IP authentication key. The general budget also shares keys across routed API endpoints rather than applying a separate allowance to each controller method. Proxy trust defaults to zero and permits only an explicitly configured single trusted proxy.
+- Session idle and absolute timestamps are checked server-side independently of MongoDB TTL removal. The store shares Mongoose's existing MongoDB client, and the adapter initializes the session TTL index. The users service awaits the unique email index before user operations.
+- Inspection of Express session and connect-mongo exposed a logout race: modifying session data during read requests triggers an upsert when a late request finishes, potentially recreating a destroyed session. Activity now uses an atomic update of an existing MongoDB session without upsert, while request session data remains unchanged. Existing CSRF tokens are returned without another full save. A controlled delayed-request test verifies that logout remains effective.
+- Unknown accounts still perform Argon2 verification using a dummy hash initialized at startup. Failed sign-in responses remain identical. Signup password strings are never trimmed or normalized.
+- An initial test assumed a fixed order for encoded Argon2 parameters. It was corrected to check algorithm, version, and parameter values independently of their serialized order.
+- Nest's `Header` decorator is method-only, so authentication cache headers are set by the shared session middleware. Helmet options were narrowed to comply with strict optional-property typing. CSP is retained for API responses and relaxed only for local Swagger.
+- Logout accepts no body or an empty JSON object and rejects properties. Content-type enforcement checks whether a body exists, allowing bodyless logout without requiring an artificial request DTO.
+- The YAML security override was scoped to Jest's legacy coverage loader so Swagger can retain its declared YAML version.
+- Full application integration tests launch native Node processes because Jest's VM ESM loader cannot reliably load CommonJS adapters requiring Nest ESM. Actual Winston logging, MongoDB, cookies, CSRF, throttling, DTO transformation, and HTTP error handling remain exercised together. The test harness pauses one user lookup to reproduce the logout race without adding test routes to production.
+
+Implementation references checked included [Express session configuration](https://expressjs.com/en/resources/middleware/session/) and [Nest rate limiting](https://docs.nestjs.com/security/rate-limiting), together with installed connect-mongo and csrf-sync source/types.
+
+### Phase 2 verification and review
+
+- A clean lockfile installation passed and npm reported zero known vulnerabilities. The first `npm ci` encountered an `ENOTEMPTY` filesystem cleanup error; affected dependency folders were preserved under the ignored `.npm-cache/phase2-install-backup` directory before retrying from empty dependency directories.
+- Root linting, strict type checks, formatting checks, and both production builds passed after clean installation.
+- All 30 backend tests passed across three suites. Integration tests used a real MongoDB 8 server with a randomly named, isolated test database and cleaned it afterward. They did not use the developer's `.env` database.
+- Verification covered complete signup/sign-in/protected access/logout, validation boundaries and unexpected properties, normalized/concurrent uniqueness, encoded Argon2 parameters, unchanged passwords, dummy verification, session and CSRF rotation, API restart persistence, idle/absolute/store expiry, bounded renewal, account deletion, and logout with a delayed read request.
+- Security checks covered session-bound tokens and allowed origins, combined signup/sign-in throttling, a general cross-endpoint budget, malformed/oversized JSON, unsupported body content types, sanitized dependency failures, cookie attributes, local Swagger, production Swagger exclusion, and log/response privacy.
+- Production tests simulated a trusted HTTPS reverse proxy and exercised signup, protected access, and logout with Secure `__Host-` cookies. Direct HTTP did not receive a production session cookie. Actual TLS/container/browser verification remains Phase 4 work.
+- The process-local limiter targets the agreed single API instance. README documents the shared-store requirement for horizontal scaling and safe proxy trust configuration.
+
+Phase 2 is ready for the engineer's API and security review. Phase 3 has not started and requires explicit approval. No repository commit or publication was performed.

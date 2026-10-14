@@ -19,4 +19,17 @@ export class AppConfigurationService {
   get logLevel(): Environment['LOG_LEVEL'] {
     return this.configuration.get('LOG_LEVEL', { infer: true });
   }
+
+  get origin(): string {
+    return this.configuration.get('APP_ORIGIN', { infer: true });
+  }
+  get sessionSecret(): string {
+    return this.configuration.get('SESSION_SECRET', { infer: true });
+  }
+  get production(): boolean {
+    return this.configuration.get('APP_ENV', { infer: true }) === 'production';
+  }
+  get trustProxyHops(): number {
+    return this.configuration.get('TRUST_PROXY_HOPS', { infer: true });
+  }
 }
