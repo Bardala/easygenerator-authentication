@@ -33,6 +33,7 @@ pids/
 .env.test.local
 .env.production.local
 .env.*
+!.env.example
 
 # NestJS build info
 *.tsbuildinfo
@@ -47,4 +48,6 @@ vite.config.ts.timestamp-*
 
 # IDEs
 .vscode/*
-!.
+
+# Local tooling
+.npm-cache/

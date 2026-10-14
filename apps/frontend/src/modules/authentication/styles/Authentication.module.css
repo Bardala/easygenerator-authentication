@@ -1,0 +1,24 @@
+.card {
+  width: min(100%, var(--auth-card-width));
+  margin-inline: auto;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+.eyebrow {
+  color: var(--color-primary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-3);
+}
+.description {
+  color: var(--color-muted);
+  margin-bottom: var(--space-6);
+}
+@media (max-width: 480px) {
+  .card {
+    padding: var(--space-5);
+  }
+}

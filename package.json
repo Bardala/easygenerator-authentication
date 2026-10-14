@@ -1,0 +1,38 @@
+{
+  "name": "easygenerator-authentication",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names backend,frontend \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm run dev --workspace @easygenerator/backend",
+    "dev:frontend": "npm run dev --workspace @easygenerator/frontend",
+    "build": "npm run build --workspaces",
+    "start:backend": "npm run start --workspace @easygenerator/backend",
+    "preview:frontend": "npm run preview --workspace @easygenerator/frontend",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "npm run typecheck --workspaces",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check": "npm run lint && npm run typecheck && npm run format:check",
+    "verify": "npm run check && npm run build",
+    "db:up": "docker compose -f compose.dev.yaml up -d --wait",
+    "db:down": "docker compose -f compose.dev.yaml down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.0.0",
+    "eslint": "^10.0.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "~6.0.0",
+    "typescript-eslint": "^8.71.2"
+  }
+}
