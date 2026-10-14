@@ -8,7 +8,9 @@ Phase 1 provides workspace tooling, feature modules, routing, CSS foundations, v
 
 Phase 1 review refinements add a backend common module, global error formatting, a database readiness adapter, explicit `Req`/`Res` contract naming, and regression tests. Success payloads retain their existing shape.
 
-Phase 2 implements the backend authentication API, MongoDB sessions, password hashing, validation, CSRF protection, throttling, and local Swagger documentation. Frontend authentication forms and protected routing remain scheduled for Phase 3 after review.
+Phase 2 implements the backend authentication API, MongoDB sessions, password hashing, validation, CSRF protection, throttling, and local Swagger documentation.
+
+Phase 3 implements native signup/sign-in forms, protected routing, password guidance, session restoration, and recoverable logout using TanStack Query and CSS Modules. Browser automation, production containers, and CI remain Phase 4 work.
 
 ## Prerequisites
 
@@ -37,26 +39,40 @@ npm run dev
 - Backend readiness: <http://127.0.0.1:3000/api/health>
 - Local Swagger: <http://127.0.0.1:3000/api/docs>
 
-Vite forwards `/api` requests to the backend. The Phase 1 setup page displays the real readiness result. MongoDB data lives in a named Docker volume; `npm run db:down` stops the service without removing that data.
+Vite forwards `/api` requests to the backend. The home route opens the application for authenticated users and sends anonymous users to sign-in. MongoDB data lives in a named Docker volume; `npm run db:down` stops the service without removing that data.
 
 If Docker is unavailable, start a local MongoDB server and set `MONGODB_URI` accordingly. The API remains available to report `503` while MongoDB is unavailable. If the initial connection fails, start MongoDB and restart the backend; disconnections after a successful initial connection use the driver's reconnect behavior.
 
 ## Commands
 
-| Command                                        | Purpose                                                   |
-| ---------------------------------------------- | --------------------------------------------------------- |
-| `npm run dev`                                  | Start both applications with file watching                |
-| `npm run dev:backend` / `npm run dev:frontend` | Start one application                                     |
-| `npm run check`                                | Lint, type-check, and check formatting                    |
-| `npm run build`                                | Build both applications                                   |
-| `npm run verify`                               | Run checks and production builds                          |
-| `npm run test:backend`                         | Build and run backend unit/HTTP/MongoDB integration tests |
-| `npm run format`                               | Apply formatting                                          |
-| `npm run start:backend`                        | Run the compiled backend                                  |
-| `npm run preview:frontend`                     | Preview the frontend build at port 4173                   |
-| `npm run db:up` / `npm run db:down`            | Start/stop development MongoDB                            |
+| Command                                        | Purpose                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| `npm run dev`                                  | Start both applications with file watching                      |
+| `npm run dev:backend` / `npm run dev:frontend` | Start one application                                           |
+| `npm run check`                                | Lint, type-check, and check formatting                          |
+| `npm run build`                                | Build both applications                                         |
+| `npm run verify`                               | Run checks and production builds                                |
+| `npm run test:backend`                         | Build and run backend unit/HTTP/MongoDB integration tests       |
+| `npm run test:frontend`                        | Run isolated frontend component tests (no database required)    |
+| `npm run test:frontend:integration`            | Build backend and verify the frontend flow against real MongoDB |
+| `npm run format`                               | Apply formatting                                                |
+| `npm run start:backend`                        | Run the compiled backend                                        |
+| `npm run preview:frontend`                     | Preview the frontend build at port 4173                         |
+| `npm run db:up` / `npm run db:down`            | Start/stop development MongoDB                                  |
 
 The Vite proxy targets backend port 3000. Update its configuration if changing `PORT`. Frontend preview is for local build inspection, not production hosting. Production containers and CI arrive in Phase 4.
+
+## Frontend behavior and review
+
+Open `/sign-up` to create an account or `/sign-in` to sign in. Successful authentication opens `/app`, which displays “Welcome to the application.” Session restoration completes before redirect decisions. Refreshing `/app` restores the server session; connection failures show a retry screen instead of signing the user out.
+
+Forms validate on blur and submission, associate inline errors with their inputs, and focus the first invalid field. Password visibility and signup requirements live in a separate component. Pending requests disable the form and a synchronous submission guard prevents repeated POSTs. Passwords remain unchanged. Validation counts Unicode characters consistently with backend name/password validation; native UTF-16 input caps allow valid characters without truncating them prematurely.
+
+Current-user data lives only in TanStack Query under `['auth', 'me']`, with a 60-second freshness window and revalidation on focus/reconnection. The HTTP client forwards Query abort signals. Mark future private queries with `meta: { private: true }` so authentication transitions cancel requests and remove private cached data. Authentication mutation variables are reset after submission and use immediate garbage collection; no authentication state or tokens are persisted in browser storage.
+
+CSRF tokens are acquired before submission and replaced after authentication. Invalid/expired tokens are refreshed, then the user explicitly retries their POST. Failed logout preserves the user cache and offers another attempt; successful server-confirmed logout cancels private requests, clears private data/token caches, and returns to sign-in. Client routes supplement the backend authentication checks.
+
+`npm run test:frontend` covers validation, accessible feedback, password controls, pending/double-submit behavior, restoration, expiry, connection recovery, server errors, CSRF recovery, cache transitions, and late private responses. `npm run test:frontend:integration` requires MongoDB at `127.0.0.1:27017`; it launches the real backend with a random isolated test database, drives React through Testing Library, and cleans the database afterward. Its cookie bridge simulates same-origin transport and remounting simulates a refresh; real browser cookie/network/visual checks are reserved for Phase 4.
 
 ## Environment
 
@@ -84,8 +100,8 @@ apps/
     lib/                       # HTTP utilities
     styles/                    # Global variables and base styles
     modules/
-      authentication/          # Own components, pages, types, styles
-      application/             # Own API functions, hooks, components, pages, types, styles
+      authentication/          # Own API, hooks, validation, components, pages, types, styles
+      application/             # Authenticated welcome page and module styles
   backend/src/
     common/
       adapters/                # Normalize HTTP errors
@@ -104,7 +120,7 @@ apps/
       authentication/
 ```
 
-Modules gain hooks, validation functions, and API functions when their behavior is implemented; empty abstractions are not added in advance. CSS Modules consume global CSS variables. TanStack Query owns server data; form state will remain local and use native inputs. No frontend form or validation libraries are installed.
+Modules gain hooks, validation functions, and API functions when their behavior is implemented; empty abstractions are not added in advance. CSS Modules consume global CSS variables. TanStack Query owns server data; form errors remain local and input values are read from native FormData. No frontend form or validation libraries are installed.
 
 There is no shared package in this scope. Backend framework/database types stay in the backend, and frontend API types remain in their feature module.
 

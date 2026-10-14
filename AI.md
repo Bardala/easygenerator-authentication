@@ -88,3 +88,32 @@ Implementation references checked included [Express session configuration](https
 - The process-local limiter targets the agreed single API instance. README documents the shared-store requirement for horizontal scaling and safe proxy trust configuration.
 
 Phase 2 is ready for the engineer's API and security review. Phase 3 has not started and requires explicit approval. No repository commit or publication was performed.
+
+## Phase 3 assistance
+
+The engineer approved starting Phase 3. AI implemented the frontend signup, sign-in, protected welcome, and logout flows, retaining native React forms, TanStack Query, CSS Modules, global variables, and feature-owned files. No React Hook Form, Zod, frontend validator, shared workspace, or extra state container was introduced.
+
+### Decisions and corrections
+
+- Native inputs remain uncontrolled and values are read through FormData. A feature hook owns submission, blur validation, errors, and focus behavior. Password feedback and visibility use local state within the password component, keeping typing updates out of the parent form.
+- Current-user data remains in `['auth', 'me']` with the agreed freshness and revalidation settings. Route boundaries wait for restoration and show connection retry separately from anonymous sessions. Common layout receives navigation by composition instead of importing authentication behavior.
+- Successful authentication replaces user/token caches directly. Private queries use explicit metadata and consume abort signals; session transitions cancel outstanding private queries and remove cached private data. Logout changes authentication only after server confirmation. Failed logout remains recoverable.
+- Mutation retries are disabled. CSRF/session-expiry failures refresh security tokens and require an explicit submission retry. Mutation variables are reset and use zero garbage-collection time to avoid retaining submitted passwords after completion. Authentication cache stays in memory.
+- Tests exposed an accessibility timing issue: server-error focus attempted to target an input while the pending fieldset was still disabled. Focus now waits until the next animation frame after the form is enabled.
+- Native maxlength counts UTF-16 units while backend name/password validators count Unicode characters. Input caps allow two units per permitted character, and explicit validation enforces the actual limits. A maximum-length Unicode password is exercised against the real backend.
+- Obsolete foundation and placeholder pages/readiness UI were removed when the real application routes replaced them. Backend readiness remains available through its documented endpoint.
+- Added Vitest, Testing Library, user-event, jest-dom, and jsdom as frontend development dependencies. Test TypeScript files are included in strict type checking. Full browser automation remains in Phase 4.
+- A real API integration test reuses the backend's native-process fixture, with guarded cleanup of a randomly named test database. Vitest's DOM-transformed import URLs required resolving that fixture from the workspace directory rather than passing a browser URL to Node's process launcher.
+
+Implementation references checked included [TanStack Query cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation), [QueryClient cache operations](https://tanstack.com/query/latest/docs/framework/react/reference/QueryClient), and [native maxlength semantics](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/maxlength).
+
+### Phase 3 verification and review
+
+- Frontend development dependency installation updated the lockfile and reported zero known vulnerabilities.
+- Root linting, strict type checks (including frontend tests), formatting, and both production builds passed.
+- All 13 component tests passed. They cover blur/submission validation, accessible descriptions and focus, password guidance/visibility, unchanged password submission, pending states and duplicate-submit prevention, anonymous/expired/restored sessions, connection retry, invalid credentials, server field errors, CSRF acquisition/rotation/recovery, recoverable logout, and cancellation of late private responses.
+- The real frontend/API integration test passed against an isolated real MongoDB database: signup, welcome, restoration with an empty client cache after remounting, logout, and sign-in. It exercised a 128-character Unicode password to check frontend/backend validation compatibility. The test database was cleaned afterward.
+- All 30 backend regression tests also passed after extending the shared test fixture with guarded database cleanup for the frontend integration test.
+- Browser surface discovery returned no available browsers. DOM interaction and compiled styles were verified, but visual review, real browser refresh/cookie behavior, and Playwright checks are not claimed; these remain Phase 4 verification.
+
+Phase 3 is ready for review of styling, module boundaries, forms, and session behavior. Phase 4 has not started and requires explicit approval. No commit or publication was performed.

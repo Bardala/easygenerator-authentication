@@ -14,20 +14,6 @@
 .description {
   color: var(--color-muted);
 }
-.note {
-  color: var(--color-muted);
-  font-size: var(--font-size-small);
-  margin-bottom: 0;
-}
-.readiness {
-  margin: var(--space-6) 0;
-  padding: var(--space-5);
-  background: var(--color-background);
-  border-radius: var(--radius-medium);
-}
-.readiness p {
-  margin-top: 0;
-}
 .button {
   cursor: pointer;
   border: 1px solid var(--color-primary);
@@ -45,4 +31,8 @@
   .card {
     padding: var(--space-5);
   }
+}
+.error {
+  color: var(--color-error);
+  margin-bottom: var(--space-4);
 }

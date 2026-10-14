@@ -22,3 +22,67 @@
     padding: var(--space-5);
   }
 }
+.fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+.field label {
+  font-weight: var(--font-weight-semibold);
+}
+.field input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.field input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+.error {
+  color: var(--color-error);
+  font-size: var(--font-size-small);
+  margin: 0;
+}
+.notice {
+  background: var(--color-background);
+  padding: var(--space-4);
+  border-radius: var(--radius-medium);
+  margin-bottom: var(--space-5);
+}
+.button,
+.secondaryButton {
+  cursor: pointer;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
+  font-weight: var(--font-weight-semibold);
+}
+.button {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+.secondaryButton {
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+.button:disabled,
+.secondaryButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.switch {
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  color: var(--color-muted);
+}

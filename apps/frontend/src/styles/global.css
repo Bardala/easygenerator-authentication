@@ -5,6 +5,8 @@
   --color-muted: #526078;
   --color-primary: #2748b4;
   --color-on-primary: #ffffff;
+  --color-error: #a32134;
+  --color-success: #176340;
   --color-border: #dce2ee;
   --font-family:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

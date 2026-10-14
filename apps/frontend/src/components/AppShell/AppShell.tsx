@@ -1,8 +1,11 @@
-import type { PropsWithChildren } from 'react';
-import { Link, NavLink } from 'react-router';
+import type { PropsWithChildren, ReactNode } from 'react';
+import { Link } from 'react-router';
 import styles from './AppShell.module.css';
 
-export function AppShell({ children }: PropsWithChildren) {
+export function AppShell({
+  children,
+  navigation,
+}: PropsWithChildren<{ navigation: ReactNode }>) {
   return (
     <div className={styles.shell}>
       <a className={styles.skipLink} href="#main-content">
@@ -13,15 +16,14 @@ export function AppShell({ children }: PropsWithChildren) {
           Authentication application
         </Link>
         <nav className={styles.navigation} aria-label="Main navigation">
-          <NavLink to="/sign-in">Sign in</NavLink>
-          <NavLink to="/sign-up">Sign up</NavLink>
+          {navigation}
         </nav>
       </header>
       <main id="main-content" className={styles.main}>
         {children}
       </main>
       <footer className={styles.footer}>
-        Phase 1 · Development foundation
+        Secure access · Simple by design
       </footer>
     </div>
   );

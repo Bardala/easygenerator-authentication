@@ -40,6 +40,11 @@ process.on('message', async (message) => {
     process.send({ disconnected: true });
   }
   if (message === 'stop') {
+    if (process.env.CLEAN_TEST_DATABASE === '1') {
+      if (!connection.db.databaseName.startsWith('easygenerator_auth_test_'))
+        throw new Error('Unsafe test cleanup database');
+      await connection.db.dropDatabase();
+    }
     await app.close();
     process.exit(0);
   }

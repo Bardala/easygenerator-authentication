@@ -28,7 +28,9 @@
     "verify": "npm run check && npm run build",
     "test:backend": "npm run test --workspace @easygenerator/backend",
     "db:up": "docker compose -f compose.dev.yaml up -d --wait",
-    "db:down": "docker compose -f compose.dev.yaml down"
+    "db:down": "docker compose -f compose.dev.yaml down",
+    "test:frontend": "npm run test --workspace @easygenerator/frontend",
+    "test:frontend:integration": "npm run build --workspace @easygenerator/backend && npm run test:integration --workspace @easygenerator/frontend"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
