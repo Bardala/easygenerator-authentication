@@ -10,6 +10,8 @@ export default tseslint.config(
       '**/node_modules/**',
       '.npm-cache/**',
       '**/coverage/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       '.agents/**',
       '.codex/**',
       '.aws/**',
@@ -18,8 +20,24 @@ export default tseslint.config(
   js.configs.recommended,
   tseslint.configs.recommended,
   {
-    files: ['**/*.mjs', 'apps/backend/**/*.ts', 'apps/frontend/vite.config.ts'],
+    files: [
+      '**/*.mjs',
+      'apps/backend/**/*.ts',
+      'apps/frontend/vite.config.ts',
+      'e2e/**/*.ts',
+      'playwright.config.ts',
+    ],
     languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['e2e/**/*.ts'],
+    rules: {
+      'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }],
+    },
+  },
+  {
+    files: ['docker/mongodb/*.js'],
+    languageOptions: { globals: { ...globals.node, db: 'readonly' } },
   },
   {
     files: ['apps/frontend/src/**/*.{ts,tsx}'],

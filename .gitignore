@@ -51,3 +51,13 @@ vite.config.ts.timestamp-*
 
 # Local tooling
 .npm-cache/
+
+# Browser verification artifacts
+playwright-report/
+test-results/
+
+# TLS credentials are mounted at runtime, never committed or baked into images.
+*.pem
+*.key
+*.p12
+*.pfx

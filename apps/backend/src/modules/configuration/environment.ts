@@ -1,6 +1,7 @@
 export interface Environment {
   APP_ENV: 'local' | 'test' | 'production';
   PORT: number;
+  HOST: '127.0.0.1' | '0.0.0.0';
   APP_ORIGIN: string;
   MONGODB_URI: string;
   LOG_LEVEL: 'error' | 'warn' | 'info' | 'debug';
@@ -15,6 +16,9 @@ export function validateEnvironment(
   const appEnvironment =
     input['APP_ENV'] ??
     (input['NODE_ENV'] === 'production' ? 'production' : 'local');
+  const host = input['HOST'] ?? '127.0.0.1';
+  if (!['127.0.0.1', '0.0.0.0'].includes(String(host)))
+    errors.push('HOST must be 127.0.0.1 or 0.0.0.0.');
   const port = Number(input['PORT'] ?? 3000);
   const origin = String(input['APP_ORIGIN'] ?? '');
   const mongoUri = String(input['MONGODB_URI'] ?? '');
@@ -71,6 +75,7 @@ export function validateEnvironment(
   return {
     APP_ENV: appEnvironment as Environment['APP_ENV'],
     PORT: port,
+    HOST: host as Environment['HOST'],
     APP_ORIGIN: origin,
     MONGODB_URI: mongoUri,
     LOG_LEVEL: logLevel as Environment['LOG_LEVEL'],

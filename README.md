@@ -10,7 +10,9 @@ Phase 1 review refinements add a backend common module, global error formatting,
 
 Phase 2 implements the backend authentication API, MongoDB sessions, password hashing, validation, CSRF protection, throttling, and local Swagger documentation.
 
-Phase 3 implements native signup/sign-in forms, protected routing, password guidance, session restoration, and recoverable logout using TanStack Query and CSS Modules. Browser automation, production containers, and CI remain Phase 4 work.
+Phase 3 implements native signup/sign-in forms, protected routing, password guidance, session restoration, and recoverable logout using TanStack Query and CSS Modules.
+
+Phase 4 adds real Chromium verification, multi-stage container builds, Nginx routing/TLS configuration, private MongoDB/API networking, and a GitHub Actions verification workflow. Container execution and remote CI results must be verified on a Docker-capable runner before claiming the phase is fully validated.
 
 ## Prerequisites
 
@@ -45,22 +47,25 @@ If Docker is unavailable, start a local MongoDB server and set `MONGODB_URI` acc
 
 ## Commands
 
-| Command                                        | Purpose                                                         |
-| ---------------------------------------------- | --------------------------------------------------------------- |
-| `npm run dev`                                  | Start both applications with file watching                      |
-| `npm run dev:backend` / `npm run dev:frontend` | Start one application                                           |
-| `npm run check`                                | Lint, type-check, and check formatting                          |
-| `npm run build`                                | Build both applications                                         |
-| `npm run verify`                               | Run checks and production builds                                |
-| `npm run test:backend`                         | Build and run backend unit/HTTP/MongoDB integration tests       |
-| `npm run test:frontend`                        | Run isolated frontend component tests (no database required)    |
-| `npm run test:frontend:integration`            | Build backend and verify the frontend flow against real MongoDB |
-| `npm run format`                               | Apply formatting                                                |
-| `npm run start:backend`                        | Run the compiled backend                                        |
-| `npm run preview:frontend`                     | Preview the frontend build at port 4173                         |
-| `npm run db:up` / `npm run db:down`            | Start/stop development MongoDB                                  |
+| Command                                             | Purpose                                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run dev`                                       | Start both applications with file watching                                      |
+| `npm run dev:backend` / `npm run dev:frontend`      | Start one application                                                           |
+| `npm run check`                                     | Lint, type-check, and check formatting                                          |
+| `npm run build`                                     | Build both applications                                                         |
+| `npm run verify`                                    | Run checks and production builds                                                |
+| `npm run test:backend`                              | Build and run backend unit/HTTP/MongoDB integration tests                       |
+| `npm run test:frontend`                             | Run isolated frontend component tests (no database required)                    |
+| `npm run test:frontend:integration`                 | Build backend and verify the frontend flow against real MongoDB                 |
+| `npm run test:e2e`                                  | Build both apps and run real Chromium tests against an isolated database        |
+| `npm run test:containers`                           | Build and smoke-test HTTP/HTTPS container delivery (Docker/Compose v2 required) |
+| `npm run containers:up` / `npm run containers:down` | Start/stop the complete container stack in explicit localhost HTTP mode         |
+| `npm run format`                                    | Apply formatting                                                                |
+| `npm run start:backend`                             | Run the compiled backend                                                        |
+| `npm run preview:frontend`                          | Preview the frontend build at port 4173                                         |
+| `npm run db:up` / `npm run db:down`                 | Start/stop development MongoDB                                                  |
 
-The Vite proxy targets backend port 3000. Update its configuration if changing `PORT`. Frontend preview is for local build inspection, not production hosting. Production containers and CI arrive in Phase 4.
+The Vite proxy targets backend port 3000. Update its configuration if changing `PORT`. Frontend preview is for local build inspection, not production hosting. Container delivery and CI are described below. Set the tooling-only `BACKEND_ORIGIN` when a local preview/test proxy needs a different API port.
 
 ## Frontend behavior and review
 
@@ -72,7 +77,7 @@ Current-user data lives only in TanStack Query under `['auth', 'me']`, with a 60
 
 CSRF tokens are acquired before submission and replaced after authentication. Invalid/expired tokens are refreshed, then the user explicitly retries their POST. Failed logout preserves the user cache and offers another attempt; successful server-confirmed logout cancels private requests, clears private data/token caches, and returns to sign-in. Client routes supplement the backend authentication checks.
 
-`npm run test:frontend` covers validation, accessible feedback, password controls, pending/double-submit behavior, restoration, expiry, connection recovery, server errors, CSRF recovery, cache transitions, and late private responses. `npm run test:frontend:integration` requires MongoDB at `127.0.0.1:27017`; it launches the real backend with a random isolated test database, drives React through Testing Library, and cleans the database afterward. Its cookie bridge simulates same-origin transport and remounting simulates a refresh; real browser cookie/network/visual checks are reserved for Phase 4.
+`npm run test:frontend` covers validation, accessible feedback, password controls, pending/double-submit behavior, restoration, expiry, connection recovery, server errors, CSRF recovery, cache transitions, and late private responses. `npm run test:frontend:integration` requires MongoDB at `127.0.0.1:27017`; it launches the real backend with a random isolated test database, drives React through Testing Library, and cleans the database afterward. Its cookie bridge simulates same-origin transport and remounting simulates a refresh; `npm run test:e2e` covers real browser cookie, network, refresh, and responsive behavior.
 
 ## Environment
 
@@ -81,6 +86,7 @@ The backend reads the repository-root `.env` regardless of its launch directory.
 | Variable           | Meaning                                                                                              |
 | ------------------ | ---------------------------------------------------------------------------------------------------- |
 | `APP_ENV`          | `local`, `test`, or `production`; defaults to production when `NODE_ENV=production`, otherwise local |
+| `HOST`             | API listen address: `127.0.0.1` by default; containers explicitly use `0.0.0.0`                      |
 | `PORT`             | Backend port, defaults to 3000                                                                       |
 | `APP_ORIGIN`       | Exact browser origin; local/test require a loopback host and production requires HTTPS               |
 | `MONGODB_URI`      | MongoDB connection string                                                                            |
@@ -89,6 +95,59 @@ The backend reads the repository-root `.env` regardless of its launch directory.
 | `TRUST_PROXY_HOPS` | `0` by default for direct access; `1` only behind a trusted single reverse proxy                     |
 
 Both development applications bind to loopback. The Compose database is exposed only on `127.0.0.1`. This unauthenticated database service is for local development only.
+
+## Browser verification
+
+Install Chromium once, then run the suite with MongoDB running on `127.0.0.1:27017`:
+
+```bash
+npm exec -- playwright install chromium
+npm run test:e2e
+```
+
+On Linux runners missing browser system libraries, use `npm exec -- playwright install --with-deps chromium`. Tests launch their own backend on port 3100 and built-frontend preview on 4174; keep these ports free. They use a random `easygenerator_auth_test_*` database, generated test secret, and guarded cleanup. They do not reuse the developer's server or database. Vite preview serves the compiled frontend only for these local tests.
+
+Six tests cover signup/welcome/refresh/logout/sign-in, anonymous direct protected navigation, server-enforced expiry, restoration and logout failures, a late session query completing around logout, and mobile validation/layout. Expiry and request timing are controlled through IPC to the owned test fixture; production exposes no test-control endpoints. Browser traces and desktop/mobile screenshots are written under ignored `playwright-report/` and `test-results/` directories.
+
+## Container delivery
+
+Docker Engine access and Compose v2 are required; legacy `docker-compose` 1.29.2 cannot run the supplied `--wait` commands. Production image builds use Node 24, locked npm dependencies, and separate build/runtime stages. The backend runs as `node`; frontend Nginx and MongoDB run under their dedicated non-root users. Only the frontend publishes a host port. Nginx forwards `/api` to the private API and overwrites forwarded IP/protocol headers; MongoDB is on a separate internal database network.
+
+The application database user has `readWrite` permission only for `easygenerator`. MongoDB's bootstrap administrator uses a separate password. In the private root `.env`, set `SESSION_SECRET`, `MONGO_ROOT_PASSWORD`, and `MONGO_APP_PASSWORD` to independently generated values from `randomBytes(32).toString('hex')`. The MongoDB initialization script requires 64 lowercase hexadecimal characters for its two passwords. Values in `.env.example` are placeholders. MongoDB initialization runs only for a new volume; changing environment values does not rotate accounts in an existing database.
+
+The complete container stack uses a distinct Compose project and an `authentication-data` volume, separate from the development database volume. Stop/start preserves users and sessions. Never remove a real database volume to rotate credentials; update credentials through MongoDB administration instead.
+
+For explicit localhost HTTP:
+
+```bash
+npm run containers:up
+# Open http://127.0.0.1:8080
+npm run containers:down
+```
+
+This command combines `compose.yaml` with `compose.local.yaml`. It uses local-mode cookies, binds the published frontend port to loopback, and keeps the API/MongoDB unpublished. `NODE_ENV` still selects production dependencies; `APP_ENV=local` explicitly permits localhost HTTP. Local Swagger is available through `/api/docs`.
+
+For HTTPS, set `PUBLIC_ORIGIN` to the exact browser origin, `FRONTEND_PORT` to the published port, and `TLS_CERT_PATH`/`TLS_KEY_PATH` to absolute paths to your certificate chain and private key. Make those mounted files readable by the image's nginx user without exposing the private key to other host users. Keep `BIND_ADDRESS=127.0.0.1` for local inspection; explicitly select an appropriate host interface for an actual TLS deployment. Use a publicly trusted certificate for production clients.
+
+```bash
+docker compose --project-name easygenerator-authentication \
+  -f compose.yaml -f compose.https.yaml up --build -d --wait
+```
+
+For example, an HTTPS localhost check at port 8080 uses `PUBLIC_ORIGIN=https://localhost:8080`; a public server on port 443 uses `PUBLIC_ORIGIN=https://auth.example.com` and `FRONTEND_PORT=443`. HTTPS listens on container port 8080 in both cases. Stop with the same project/files and `down` (without `--volumes`). Base Compose defaults the backend to production; `compose.https.yaml` terminates TLS directly in Nginx and forwards the actual HTTPS scheme. Do not combine the local HTTP and HTTPS overrides. Without TLS termination, production authentication cannot establish Secure browser cookies.
+
+The supplied proxy trusts no client forwarding headers and the backend trusts only the single Nginx hop. If adding another load balancer or changing TLS termination, revisit network access, header rewriting, and trusted proxy configuration together. Production Swagger is disabled. Application containers use read-only filesystems, temporary scratch space, dropped capabilities, and `no-new-privileges`; secrets and local tooling are excluded from Docker build context. Base image tags track their selected release lines; exact image digests are not pinned.
+
+## Container smoke checks and CI
+
+```bash
+npm exec -- playwright install chromium
+npm run test:containers
+```
+
+This command requires Docker/Compose v2, Chromium, OpenSSL, and free localhost port 18080. It creates its own randomly named Compose project, generated credentials, disposable database volume, and temporary test certificate. It checks non-root users, unpublished API/database ports, Nginx SPA/assets, readiness, persisted users/sessions across restart, HTTP logout, HTTPS Secure cookies, and the real browser login/refresh/logout flow. It removes only that temporary project's containers/volume. Self-signed certificate trust is bypassed only in the isolated test browser; Node HTTPS probes trust the generated certificate explicitly. Normal production clients must verify trusted certificates.
+
+`.github/workflows/verify.yaml` runs clean npm installation, strict checks, unit/component/integration tests, production builds, Chromium tests, and the container smoke command on an Ubuntu/Node 24 runner. It uses a MongoDB test service and disposable generated credentials, needs no application secrets, and uploads browser reports for seven days. It grants repository read access only; it does not deploy, publish images, or create a repository. GitHub CI execution begins after code is pushed; a prepared workflow is not a successful remote CI run.
 
 ## Structure and boundaries
 

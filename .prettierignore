@@ -5,3 +5,13 @@ coverage
 package-lock.json
 *.pdf
 .env
+
+# Browser verification artifacts
+playwright-report/
+test-results/
+
+# TLS credentials are mounted at runtime, never committed or baked into images.
+*.pem
+*.key
+*.p12
+*.pfx

@@ -1,0 +1,20 @@
+.git
+.agents
+.codex
+.aws
+.npm-cache
+**/node_modules
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+.env
+.env.*
+*.pdf
+*.log
+
+# TLS credentials are mounted at runtime, never committed or baked into images.
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx

@@ -1,0 +1,70 @@
+services:
+  mongodb:
+    image: mongo:8.0
+    user: mongodb
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: bootstrap_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD}
+    volumes:
+      - authentication-data:/data/db
+      - ./docker/mongodb/init-users.js:/docker-entrypoint-initdb.d/init-users.js:ro
+    networks: [database]
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --nodb
+        - --eval
+        - 'try { const client = new Mongo("mongodb://authentication:" + encodeURIComponent(process.env.MONGO_APP_PASSWORD) + "@127.0.0.1:27017/easygenerator?authSource=easygenerator"); quit(client.getDB("easygenerator").runCommand({ ping: 1 }).ok ? 0 : 1); } catch { quit(1); }'
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      APP_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN to the HTTPS browser origin}
+      MONGODB_URI: mongodb://authentication:${MONGO_APP_PASSWORD}@mongodb:27017/easygenerator?authSource=easygenerator
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET}
+      TRUST_PROXY_HOPS: 1
+      LOG_LEVEL: info
+    depends_on:
+      mongodb: { condition: service_healthy }
+    networks: [application, database]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    restart: unless-stopped
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - '${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-8080}:8080'
+    depends_on:
+      backend: { condition: service_healthy }
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+volumes:
+  authentication-data:
+networks:
+  application:
+  database:
+    internal: true

@@ -15,12 +15,21 @@ app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 configureApplication(app);
 const connection = app.get(getConnectionToken());
 await connection.asPromise();
-await app.listen(0, '127.0.0.1');
-process.send({ ready: await app.getUrl() });
+await app.listen(Number(process.env.TEST_HTTP_PORT ?? 0), '127.0.0.1');
+process.send?.({ ready: await app.getUrl() });
 const users = app.get(UsersService);
 const findPublic = users.findPublic.bind(users);
 let resume;
 process.on('message', async (message) => {
+  if (typeof message === 'object' && message.command === 'expire') {
+    await connection.db
+      .collection('sessions')
+      .updateMany(
+        { 'session.userId': message.userId },
+        { $set: { 'session.lastSeenAt': Date.now() - 30 * 60 * 1000 - 1000 } },
+      );
+    process.send({ expired: true });
+  }
   if (message === 'pause-user-lookup') {
     users.findPublic = async (id) => {
       process.send({ waiting: true });
@@ -34,6 +43,7 @@ process.on('message', async (message) => {
   if (message === 'resume-user-lookup') {
     users.findPublic = findPublic;
     resume();
+    process.send({ resumed: true });
   }
   if (message === 'disconnect') {
     await connection.close();

@@ -21,7 +21,7 @@
     "start:backend": "npm run start --workspace @easygenerator/backend",
     "preview:frontend": "npm run preview --workspace @easygenerator/frontend",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "npm run typecheck --workspaces",
+    "typecheck": "npm run typecheck --workspaces && tsc -p e2e/tsconfig.json",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "check": "npm run lint && npm run typecheck && npm run format:check",
@@ -30,10 +30,15 @@
     "db:up": "docker compose -f compose.dev.yaml up -d --wait",
     "db:down": "docker compose -f compose.dev.yaml down",
     "test:frontend": "npm run test --workspace @easygenerator/frontend",
-    "test:frontend:integration": "npm run build --workspace @easygenerator/backend && npm run test:integration --workspace @easygenerator/frontend"
+    "test:frontend:integration": "npm run build --workspace @easygenerator/backend && npm run test:integration --workspace @easygenerator/frontend",
+    "test:e2e": "npm run build && playwright test",
+    "test:containers": "node scripts/container-smoke.mjs",
+    "containers:up": "docker compose --project-name easygenerator-authentication -f compose.yaml -f compose.local.yaml up --build -d --wait",
+    "containers:down": "docker compose --project-name easygenerator-authentication -f compose.yaml -f compose.local.yaml down"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.0.0",
     "concurrently": "^9.0.0",
     "eslint": "^10.0.0",

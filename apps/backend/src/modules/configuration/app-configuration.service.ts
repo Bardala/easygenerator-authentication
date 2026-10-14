@@ -8,6 +8,10 @@ export class AppConfigurationService {
     private readonly configuration: ConfigService<Environment, true>,
   ) {}
 
+  get host(): Environment['HOST'] {
+    return this.configuration.get('HOST', { infer: true });
+  }
+
   get port(): number {
     return this.configuration.get('PORT', { infer: true });
   }
