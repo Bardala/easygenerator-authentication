@@ -192,3 +192,34 @@ References checked included [Playwright CI](https://playwright.dev/docs/ci), the
 - Full Docker image builds and `npm run test:containers` remain unverified because Docker daemon access is denied and Compose v2 is unavailable. The smoke command failed the tooling prerequisite before starting any containers. Run it on a Docker-capable machine or the prepared GitHub runner before marking runtime verification complete.
 
 The original Phase 4 implementation is ready for code/configuration review, with container verification outstanding. Phase 5 and public publication have not started. No commit or push was performed.
+
+## Phase 5 — Documentation and submission preparation
+
+The engineer instructed AI to start Phase 5 and then continue it. AI completed the documentation and audited submission contents without changing application code, creating commits, or publishing a repository.
+
+### Assistance and decisions
+
+- Reworked the README introduction into an application overview and explicit verification status. Removed obsolete wording that described already implemented container/proxy work as future work.
+- Completed the environment reference, separating direct backend configuration from container and Vite tooling settings. Clarified which backend values Compose supplies explicitly and which secrets are unnecessary for development-only MongoDB.
+- Added a local curl example for CSRF acquisition, signup, protected access, logout, and sign-in. It uses a temporary cookie jar, demonstration credentials, and the rotated tokens returned after authentication. Shell syntax was checked; the example was not executed as a new live API test during this phase.
+- Added the assignment requirement checklist and fresh-checkout verification sequence. Retained detailed setup, architecture, validation, error, testing, HTTPS, proxy, and persistence documentation.
+- Documented the single-instance rate limiter limitation: shared MongoDB sessions and a shared signing secret alone do not provide shared rate limits. Horizontal scaling requires a shared limiter implementation.
+- Kept deployment evidence precise. Previous native Nginx HTTPS checks do not establish Docker image/runtime success, and a prepared workflow does not establish successful remote CI.
+
+Effective instructions throughout the task included working in reviewable phases, using native forms with feature-owned CSS Modules, introducing common backend concerns only when needed, and preserving the engineer's control over commits and publication. The Phase 4 simplification discussion and the decision to retain its original scope remain recorded above rather than rewriting that history.
+
+### Submission audit and verification
+
+- Audited 113 tracked files. No private environment files, TLS credentials, task PDFs, dependency folders, build outputs, or browser reports were tracked. `.env.example` remains tracked; representative private environment/key/report paths are ignored.
+- Checked tracked content for selected credential patterns without printing matching values. The only match was an intentionally synthetic MongoDB connection string in the error-handling test, used to verify that diagnostic details are not leaked. This focused check is not a comprehensive secret-scanning guarantee.
+- Reviewed filenames in reachable Git history for private environment/TLS files; none were found. Historical file contents were not exhaustively scanned.
+- Verified both workspace dependency manifests against the lockfile and checked lockfile resolution paths for local filesystem dependencies; they match, with no local path dependencies found.
+- Reviewed setup/test commands against the root scripts and container/environment configuration. Referenced submission files exist, the API example passes `bash -n`, and `git diff --check` passed.
+- Reran `npm run verify`: linting, strict backend/frontend/browser-test type checks, formatting, and both production builds passed. Final documentation formatting was checked again after updating this record.
+- The prior Phase 4 clean installation and 52 passing automated tests remain the recorded application verification evidence. These suites and the clean installation were not repeated for this documentation-only change.
+
+### Review gate and remaining verification
+
+Phase 5 documentation and local submission preparation are ready for review. Full Docker image builds/container smoke verification remain pending because this environment lacks Compose v2 and Docker daemon access. Remote GitHub Actions execution remains pending publication/push; no Git remote is configured.
+
+Before claiming complete delivery verification, run the container smoke command on a Docker-capable machine and obtain a successful GitHub Actions run. Public repository creation/push requires explicit approval of the completed submission under the agreed review protocol. No commit, push, repository publication, or recruiter message was performed. No hosted MongoDB connection string is needed for the current local setup and verification workflow.

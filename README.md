@@ -1,18 +1,14 @@
 # Authentication application
 
-A phased implementation of a React/TypeScript frontend and a NestJS/MongoDB backend.
+A session-based authentication application with signup, sign-in, a protected welcome page, and logout.
 
-## Current status
+The frontend uses React, TypeScript, Vite, React Router, TanStack Query, native forms, and CSS Modules. The backend uses NestJS, MongoDB/Mongoose, Argon2id, and MongoDB-backed sessions. npm workspaces share one dependency lockfile; there is no shared-types package.
 
-Phase 1 provides workspace tooling, feature modules, routing, CSS foundations, validated backend configuration, structured logging, and database readiness.
+## Verification status
 
-Phase 1 review refinements add a backend common module, global error formatting, a database readiness adapter, explicit `Req`/`Res` contract naming, and regression tests. Success payloads retain their existing shape.
+Application features and submission documentation are implemented. The last full local regression run passed 32 backend tests, 13 frontend component tests, one frontend/API integration test, and six Chromium tests (52 total). Clean installation, strict checks, production builds, and independent native Nginx HTTPS checks also passed. See [AI.md](AI.md) for the actual assistance and verification record.
 
-Phase 2 implements the backend authentication API, MongoDB sessions, password hashing, validation, CSRF protection, throttling, and local Swagger documentation.
-
-Phase 3 implements native signup/sign-in forms, protected routing, password guidance, session restoration, and recoverable logout using TanStack Query and CSS Modules.
-
-Phase 4 adds real Chromium verification, multi-stage container builds, Nginx routing/TLS configuration, private MongoDB/API networking, and a GitHub Actions verification workflow. Container execution and remote CI results must be verified on a Docker-capable runner before claiming the phase is fully validated.
+Docker image builds and the complete container smoke test remain pending: this machine lacks Compose v2 and Docker daemon access. The GitHub Actions workflow is prepared but has not run remotely. Public repository publication requires the engineer's final approval.
 
 ## Prerequisites
 
@@ -93,6 +89,21 @@ The backend reads the repository-root `.env` regardless of its launch directory.
 | `LOG_LEVEL`        | `error`, `warn`, `info`, or `debug`; defaults to info                                                |
 | `SESSION_SECRET`   | Generated secret of at least 32 characters for signed session cookies                                |
 | `TRUST_PROXY_HOPS` | `0` by default for direct access; `1` only behind a trusted single reverse proxy                     |
+
+Container and tooling settings:
+
+| Variable                         | Meaning                                                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                       | Selects runtime defaults; container builds use `production`. Explicit `APP_ENV` determines authentication transport policy.                     |
+| `PUBLIC_ORIGIN`                  | Required exact HTTPS browser origin for base/HTTPS Compose; the local override supplies its HTTP origin.                                        |
+| `MONGO_ROOT_PASSWORD`            | Independent 64-character lowercase hexadecimal bootstrap administrator password.                                                                |
+| `MONGO_APP_PASSWORD`             | Independent 64-character lowercase hexadecimal application database password.                                                                   |
+| `FRONTEND_PORT`                  | Published container frontend port; defaults to 8080.                                                                                            |
+| `BIND_ADDRESS`                   | Published host interface; defaults to `127.0.0.1`.                                                                                              |
+| `TLS_CERT_PATH` / `TLS_KEY_PATH` | Absolute paths to certificate chain/private key; required by the HTTPS override only.                                                           |
+| `BACKEND_ORIGIN`                 | Tooling-only Vite development/preview proxy target; defaults to `http://127.0.0.1:3000`. Set in the launching process, not as a browser secret. |
+
+Compose supplies backend `HOST`, `PORT`, `APP_ORIGIN`, `MONGODB_URI`, and proxy settings explicitly. Changing their root `.env` values affects direct execution, not those container values. Container-only passwords are unnecessary for the development MongoDB service.
 
 Both development applications bind to loopback. The Compose database is exposed only on `127.0.0.1`. This unauthenticated database service is for local development only.
 
@@ -221,6 +232,48 @@ Email is trimmed, lowercased, validated, and limited to 254 characters. Names ar
 
 Errors use `{ code, message, fieldErrors? }`: `400` validation, `401` invalid credentials or session, `403` invalid CSRF/origin, `409` account conflict, `413` excessive body size, `415` unsupported body content type, `429` rate limit, and `503` unavailable storage. Wrong passwords and unknown accounts both return `INVALID_CREDENTIALS`. Expired authenticated sessions return `SESSION_EXPIRED`; a cookie absent from/expired in the store returns `UNAUTHORIZED`. After expiry, request a fresh CSRF token before signing in again.
 
+### Local API example
+
+With `npm run dev` running, use the same-origin frontend proxy. These example credentials are demonstration values; use a unique email for repeated signup runs. The cookie jar is private temporary data and is removed at the end. Each successful authentication returns a rotated CSRF token.
+
+```bash
+api_origin=http://127.0.0.1:5173
+cookie_jar=$(mktemp)
+read_token() {
+  node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => { const r = JSON.parse(s); if (!r.csrfToken) process.exit(1); console.log(r.csrfToken); });'
+}
+csrf_token=$(curl --fail-with-body --silent --show-error \
+  -c "$cookie_jar" "$api_origin/api/auth/csrf" | read_token)
+
+csrf_token=$(curl --fail-with-body --silent --show-error \
+  -b "$cookie_jar" -c "$cookie_jar" \
+  -H 'Content-Type: application/json' -H "Origin: $api_origin" \
+  -H "X-CSRF-Token: $csrf_token" \
+  --data '{"email":"demo@example.com","name":"Demo User","password":"Example-password42!"}' \
+  "$api_origin/api/auth/sign-up" | read_token)
+
+curl --fail-with-body --silent --show-error \
+  -b "$cookie_jar" "$api_origin/api/auth/me"
+
+curl --fail-with-body --silent --show-error \
+  -b "$cookie_jar" -c "$cookie_jar" -X POST \
+  -H "Origin: $api_origin" -H "X-CSRF-Token: $csrf_token" \
+  "$api_origin/api/auth/sign-out"
+
+csrf_token=$(curl --fail-with-body --silent --show-error \
+  -b "$cookie_jar" -c "$cookie_jar" "$api_origin/api/auth/csrf" | read_token)
+csrf_token=$(curl --fail-with-body --silent --show-error \
+  -b "$cookie_jar" -c "$cookie_jar" \
+  -H 'Content-Type: application/json' -H "Origin: $api_origin" \
+  -H "X-CSRF-Token: $csrf_token" \
+  --data '{"email":"demo@example.com","password":"Example-password42!"}' \
+  "$api_origin/api/auth/sign-in" | read_token)
+rm -f "$cookie_jar"
+unset csrf_token cookie_jar
+```
+
+Signup/sign-in return `{ "user": { "id": "...", "email": "demo@example.com", "name": "Demo User" }, "csrfToken": "..." }`; the example extracts the token. `/auth/me` returns `{ "user": { ... } }`, and logout returns no body. Consult local Swagger for DTO schemas. If a request fails, resolve the reported error before continuing; duplicate signup returns `409`.
+
 ## Backend security and production settings
 
 - Passwords are asynchronously hashed with Argon2id (19 MiB memory, two iterations, parallelism one). Hashes are excluded from default model queries and all public responses. A unique email index is awaited before user operations; MongoDB handles simultaneous duplicate registration.
@@ -230,7 +283,7 @@ Errors use `{ code, message, fieldErrors? }`: `400` validation, `401` invalid cr
 - Routed API requests share a 100-request-per-minute budget per IP. Signup/sign-in share an additional ten-attempt budget, including invalid validation/CSRF attempts. The Nest limiter is process-local: horizontal scaling requires a shared limiter store, and restarting the API resets counters.
 - Request logs contain generated request IDs, method, status, and duration. Bodies, URLs, credentials, cookies, tokens, raw exception messages, and connection strings are excluded.
 
-For production, set `APP_ENV=production`, an HTTPS `APP_ORIGIN`, a private MongoDB URI, and a generated `SESSION_SECRET`. Behind the planned single reverse proxy, set `TRUST_PROXY_HOPS=1`, keep the API inaccessible to public clients, and ensure the proxy overwrites forwarded IP/protocol headers. Direct local access should retain `0`; blindly trusting forwarded headers allows IP spoofing. All instances must share the session secret and MongoDB store. Production container networking, Nginx forwarding, TLS/proxy instructions, and CI remain Phase 4 work.
+For production, set `APP_ENV=production`, an HTTPS `APP_ORIGIN`, a private MongoDB URI, and a generated `SESSION_SECRET`. Behind the planned single reverse proxy, set `TRUST_PROXY_HOPS=1`, keep the API inaccessible to public clients, and ensure the proxy overwrites forwarded IP/protocol headers. Direct local access should retain `0`; blindly trusting forwarded headers allows IP spoofing. All instances must share the session secret and MongoDB store. The container and HTTPS sections above describe the supplied deployment configuration. A shared session store does not make the process-local rate limiter suitable for multiple API instances; replace it with a shared limiter before horizontal scaling.
 
 ## Readiness contract
 
@@ -240,6 +293,24 @@ For production, set `APP_ENV=production`, an HTTPS `APP_ORIGIN`, a private Mongo
 - `503`: `{ "code": "DEPENDENCY_UNAVAILABLE", "message": "Database is unavailable.", "checks": { "mongodb": "down" } }`.
 
 Credentials and connection details are excluded from the response. Database connection logs use fixed messages rather than raw driver errors.
+
+## Submission checklist
+
+| Assignment requirement                               | Delivery and evidence                                                                                          |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| React with TypeScript, signup/sign-in and validation | Feature modules, native forms, component and browser tests.                                                    |
+| Protected welcome page                               | `/app` displays “Welcome to the application.”; route restoration and API access checks are tested.             |
+| NestJS with MongoDB and a protected endpoint         | Modular backend; `GET /api/auth/me` requires a valid server session.                                           |
+| Logout (optional in the assignment)                  | Implemented with server-side session destruction and private-cache cleanup.                                    |
+| Security, readability, and maintainability           | DTO validation, password hashing, sessions/CSRF, sanitized errors/logging, focused modules, strict checks.     |
+| README and AI assistance record                      | This setup/API/deployment guide and [AI.md](AI.md).                                                            |
+| Bonus logging, testing, API docs, and CI             | Winston, 52 locally passing tests, local Swagger, prepared GitHub Actions workflow. Remote CI remains pending. |
+| Reproducible container delivery                      | Dockerfiles, Compose, Nginx, and smoke script supplied; complete Docker runtime verification remains pending.  |
+| Public GitHub repository link                        | Pending final review, publication approval, and repository creation/push.                                      |
+
+For a fresh checkout, follow Local setup, start MongoDB, install Chromium, then run `npm run verify`, `npm run test:backend`, `npm run test:frontend`, `npm run test:frontend:integration`, and `npm run test:e2e`. On a Docker-capable machine, also run `npm run test:containers`. The same commands are represented in CI. Review the working diff before committing; keep `.env`, TLS material, database data, and generated reports out of the submission.
+
+Before declaring delivery fully verified, obtain a successful container smoke run and a successful GitHub Actions run. Publication follows explicit approval of the completed submission; sending the repository link to the recruiter remains the engineer's action.
 
 ## Review sequence
 
