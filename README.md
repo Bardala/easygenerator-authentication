@@ -8,7 +8,7 @@ The frontend uses React, TypeScript, Vite, React Router, TanStack Query, native 
 
 Application features and submission documentation are implemented. The last full local regression run passed 32 backend tests, 13 frontend component tests, one frontend/API integration test, and six Chromium tests (52 total). Clean installation, strict checks, production builds, and independent native Nginx HTTPS checks also passed. See [AI.md](AI.md) for the actual assistance and verification record.
 
-Docker image builds and the complete container smoke test remain pending: this machine lacks Compose v2 and Docker daemon access. The GitHub Actions workflow is prepared but has not run remotely. Public repository publication requires the engineer's final approval.
+The public repository is [Bardala/easygenerator-authentication](https://github.com/Bardala/easygenerator-authentication). [GitHub Actions verification](https://github.com/Bardala/easygenerator-authentication/actions/runs/38696702008) passed on October 15, 2026, including clean installation, all application tests, Docker image builds, and the HTTP/HTTPS container smoke test. This local machine still lacks Compose v2 and Docker daemon access; container runtime verification was completed on the GitHub runner.
 
 ## Prerequisites
 
@@ -17,7 +17,14 @@ Docker image builds and the complete container smoke test remain pending: this m
 
 ## Local setup
 
-Run all commands from the repository root:
+For a fresh copy:
+
+```bash
+git clone https://github.com/Bardala/easygenerator-authentication.git
+cd easygenerator-authentication
+```
+
+Run the following commands from the repository root. If an existing checkout already has a configured `.env`, preserve it rather than copying over it:
 
 ```bash
 nvm use
@@ -160,6 +167,14 @@ This command requires Docker/Compose v2, Chromium, OpenSSL, and free localhost p
 
 `.github/workflows/verify.yaml` runs clean npm installation, strict checks, unit/component/integration tests, production builds, Chromium tests, and the container smoke command on an Ubuntu/Node 24 runner. It uses a MongoDB test service and disposable generated credentials, needs no application secrets, and uploads browser reports for seven days. It grants repository read access only; it does not deploy, publish images, or create a repository. GitHub CI execution begins after code is pushed; a prepared workflow is not a successful remote CI run.
 
+## Architecture documentation
+
+See the [architecture documentation](docs/README.md) for connected component diagrams and explanations of important source files:
+
+- [Whole system](docs/system.md): delivery topology, trust boundaries, and authentication lifecycle.
+- [Frontend](docs/frontend.md): routing, native forms, TanStack Query, HTTP calls, and styles.
+- [Backend](docs/backend.md): Nest modules, request processing, authentication, and persistence.
+
 ## Structure and boundaries
 
 ```text
@@ -296,21 +311,21 @@ Credentials and connection details are excluded from the response. Database conn
 
 ## Submission checklist
 
-| Assignment requirement                               | Delivery and evidence                                                                                          |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| React with TypeScript, signup/sign-in and validation | Feature modules, native forms, component and browser tests.                                                    |
-| Protected welcome page                               | `/app` displays “Welcome to the application.”; route restoration and API access checks are tested.             |
-| NestJS with MongoDB and a protected endpoint         | Modular backend; `GET /api/auth/me` requires a valid server session.                                           |
-| Logout (optional in the assignment)                  | Implemented with server-side session destruction and private-cache cleanup.                                    |
-| Security, readability, and maintainability           | DTO validation, password hashing, sessions/CSRF, sanitized errors/logging, focused modules, strict checks.     |
-| README and AI assistance record                      | This setup/API/deployment guide and [AI.md](AI.md).                                                            |
-| Bonus logging, testing, API docs, and CI             | Winston, 52 locally passing tests, local Swagger, prepared GitHub Actions workflow. Remote CI remains pending. |
-| Reproducible container delivery                      | Dockerfiles, Compose, Nginx, and smoke script supplied; complete Docker runtime verification remains pending.  |
-| Public GitHub repository link                        | Pending final review, publication approval, and repository creation/push.                                      |
+| Assignment requirement                               | Delivery and evidence                                                                                                                        |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| React with TypeScript, signup/sign-in and validation | Feature modules, native forms, component and browser tests.                                                                                  |
+| Protected welcome page                               | `/app` displays “Welcome to the application.”; route restoration and API access checks are tested.                                           |
+| NestJS with MongoDB and a protected endpoint         | Modular backend; `GET /api/auth/me` requires a valid server session.                                                                         |
+| Logout (optional in the assignment)                  | Implemented with server-side session destruction and private-cache cleanup.                                                                  |
+| Security, readability, and maintainability           | DTO validation, password hashing, sessions/CSRF, sanitized errors/logging, focused modules, strict checks.                                   |
+| README and AI assistance record                      | This setup/API/deployment guide and [AI.md](AI.md).                                                                                          |
+| Bonus logging, testing, API docs, and CI             | Winston, 52 locally passing tests, local Swagger, prepared GitHub Actions workflow. Remote CI passed; see the linked verification run above. |
+| Reproducible container delivery                      | Dockerfiles, Compose, Nginx, and smoke script supplied; HTTP/HTTPS container smoke verification passed in CI.                                |
+| Public GitHub repository link                        | [Public repository](https://github.com/Bardala/easygenerator-authentication), published with the engineer's approval.                        |
 
 For a fresh checkout, follow Local setup, start MongoDB, install Chromium, then run `npm run verify`, `npm run test:backend`, `npm run test:frontend`, `npm run test:frontend:integration`, and `npm run test:e2e`. On a Docker-capable machine, also run `npm run test:containers`. The same commands are represented in CI. Review the working diff before committing; keep `.env`, TLS material, database data, and generated reports out of the submission.
 
-Before declaring delivery fully verified, obtain a successful container smoke run and a successful GitHub Actions run. Publication follows explicit approval of the completed submission; sending the repository link to the recruiter remains the engineer's action.
+The linked GitHub Actions run completed the full container smoke verification successfully. Sending the repository link to the recruiter remains the engineer's action. Future changes should rerun the same checks before submission.
 
 ## Review sequence
 

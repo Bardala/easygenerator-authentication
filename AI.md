@@ -223,3 +223,24 @@ Effective instructions throughout the task included working in reviewable phases
 Phase 5 documentation and local submission preparation are ready for review. Full Docker image builds/container smoke verification remain pending because this environment lacks Compose v2 and Docker daemon access. Remote GitHub Actions execution remains pending publication/push; no Git remote is configured.
 
 Before claiming complete delivery verification, run the container smoke command on a Docker-capable machine and obtain a successful GitHub Actions run. Public repository creation/push requires explicit approval of the completed submission under the agreed review protocol. No commit, push, repository publication, or recruiter message was performed. No hosted MongoDB connection string is needed for the current local setup and verification workflow.
+
+## Final README walkthrough — October 15, 2026
+
+After authorizing public repository creation and the initial push, the engineer asked AI to follow the README and run the app as a final check.
+
+- Inspected the published GitHub Actions run [38696702008](https://github.com/Bardala/easygenerator-authentication/actions/runs/38696702008). It completed successfully, including clean installation, strict checks/builds, all application test suites, Docker image builds, and the full HTTP/HTTPS container smoke command. Its logs confirm private networking, non-root identities, SPA/assets, persistence, sessions, HTTPS browser cookies, and logout. This resolves the earlier container/remote-CI verification gap; historical phase records above describe the situation at those earlier checkpoints.
+- Created a clean temporary checkout from the published commit without copying the working directory's dependencies or private environment. Followed `nvm use`, `npm ci`, copied `.env.example`, and generated a new private session secret. Node 24.13.1/npm 11.10.0 were selected; installation reported zero known vulnerabilities.
+- Attempted the documented `npm run db:up`; the local Docker CLI still lacks Compose v2. Followed the documented local-MongoDB alternative using a temporary real MongoDB 8.0.16 process. Launcher tooling and downloaded binaries stayed outside the project; no application dependency or existing private configuration was changed.
+- Started both applications with `npm run dev`. Frontend and Swagger URLs returned `200`; before MongoDB was available, direct/proxied readiness correctly returned a sanitized `503`. After MongoDB started and the API was restarted as documented, readiness returned `200` with MongoDB up.
+- Reran `npm run verify`, all 32 backend tests, 13 frontend component tests, the real frontend/API integration test, and all six Chromium tests. Everything passed (52 tests total).
+- Executed the README's curl block with strict shell error handling against the documented development proxy. CSRF acquisition, signup, protected access, logout, and sign-in succeeded.
+- Ran an additional headless Chromium walkthrough against the actual development servers on ports 5173/3000: anonymous protected navigation, signup, welcome, full-page refresh, logout, sign-in, and final logout. All checks passed, with zero browser page errors.
+- Updated the README's now-stale publication/verification status, linked the public repository and successful CI evidence, added fresh-clone commands, and clarified preserving an existing `.env`. Application code was unchanged. Documentation changes are left for the engineer to review and commit; no further commit or push was performed.
+
+## Architecture diagrams and source guide
+
+Before committing the final verification documentation, the engineer requested a `docs` directory with separate diagrams for the whole system, frontend, and backend, explanations of important components/files, and a README link.
+
+AI inspected the implemented modules, providers, hooks, HTTP utility, authentication services, session adapter, and request setup rather than inferring the architecture from the earlier plan. Added a documentation index and three source-linked guides with Mermaid diagrams for runtime topology, the authentication lifecycle, frontend component/data flow and route restoration, backend module dependencies, and request processing. The guides distinguish development from container delivery, native form state from cached server data, user persistence from session persistence, and public error contracts from internal exceptions.
+
+The README links the documentation index and all three guides. Local Markdown links and formatting were checked. Application code and dependencies were unchanged; no commit or push was performed.
